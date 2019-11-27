@@ -1,0 +1,56 @@
+# Node.js with Angular
+# Build a Node.js project that uses Angular.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+# container: atlassianlabs/docker-node-jdk-chrome-firefox:latest
+
+variables:
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+  VERSION: $(Build.BuildID)
+  END_POINT_API_URL: $(BASEURL)
+  SONAR_KEY: $(SONARKEY)
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Install Node.js'
+
+- task: CacheBeta@0
+  inputs:
+    key: npm | $(Agent.OS) | package-lock.json
+    path: $(npm_config_cache)
+  displayName: Cache npm
+
+- task: ReplaceTokens@1
+  inputs:
+    sourcePath: ''
+    filePattern: 'sonar-project.properties'
+    tokenRegex: '#{(\w+)}#'
+
+- task: ReplaceTokens@1
+  inputs:
+    sourcePath: 'src/assets/config'
+    filePattern: 'config.production.json'
+    tokenRegex: '#{(\w+)}#'
+
+- script: |
+    npm install -g @angular/cli
+    npm ci
+    npm run sonar
+    npm run build-prod
+  displayName: 'Build'
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'wherefore-acr'
+    repository: 'wherefore-art-thou-app'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'

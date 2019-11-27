@@ -1,0 +1,5 @@
+{
+  "environmentName": "develop",
+  "endPointApiUrl": "http://localhost:5000",
+  "version": "0.0.1"
+}
